@@ -24,7 +24,7 @@ while True:
     cv2.imshow("frame",frame)
 
     k=cv2.waitKey(1)
-    if k==ord('q'):
+    if k==ord('q') or len(faces_data)==100:
         break
 video.release()
 cv2.destroyAllWindows()
