@@ -2,7 +2,7 @@
 
 This project automatically takes attendance using face recognition. Pretty cool right? Just look at the camera and it recognizes you and marks your attendance.
 
-I've included a demo video (Demo.mov) - check it out to see how it works!
+I've included a demo video (Demo.mp4) - check it out to see how it works!
 
 ## What does it do?
 
