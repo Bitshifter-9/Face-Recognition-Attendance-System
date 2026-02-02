@@ -4,8 +4,8 @@ This project automatically takes attendance using face recognition. Pretty cool 
 
 I've included a demo video (Demo.mp4) - check it out to see how it works!
 ## 🎥 Demo Video
+▶️ [Watch the demo video](https://github.com/Bitshifter-9/Face-Recognition-Attendance-System/blob/main/Demo.mp4)
 
-[![Watch Demo](https://github.com/Bitshifter-9/Face-Recognition-Attendance-System/blob/main/demo-thumbnail.png)](https://github.com/Bitshifter-9/Face-Recognition-Attendance-System/blob/main/Demo.mp4)
 
 
 ## What does it do?
