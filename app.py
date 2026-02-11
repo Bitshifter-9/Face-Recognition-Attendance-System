@@ -119,6 +119,22 @@ with tab2:
             else:
                 st.error("No face detected. Please try again.")
     
+with tab3:
+    st.header("Attendance Records")
+    
+    if engine:
+        try:
+            ts = time.time()
+            today = datetime.fromtimestamp(ts).strftime("%d-%m-%Y")
+            
+            query = f"SELECT * FROM attendance" 
+            df = pd.read_sql(query, engine)
+            
+            st.dataframe(df.style.highlight_max(axis=0), use_container_width=True)
+            
+        except Exception as e:
+            st.error(f"Error loading records: {e}")
+    
 with tab1:
     st.header("Mark Attendance")
     
