@@ -52,6 +52,73 @@ st.title("Face Recognition Attendance System")
 
 tab1, tab2, tab3 = st.tabs(["📷 Mark Attendance", "📝 Register New Face", "📊 View Records"])
 
+with tab2:
+    st.header("Register New Face")
+    
+    reg_name = st.text_input("Enter Name", placeholder="e.g., John Doe")
+    reg_img_buffer = st.camera_input("Take a photo to register", key="register_cam")
+    
+    if st.button("Save Face"):
+        if not reg_name:
+            st.error("Please enter a name.")
+        elif reg_img_buffer is None:
+            st.error("Please take a photo.")
+        else:
+            bytes_data = reg_img_buffer.getvalue()
+            cv2_img = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
+            
+            faces_detect = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+            faces = faces_detect.detectMultiScale(gray, 1.3, 5)
+            
+            if len(faces) > 0:
+                (x,y,w,h) = max(faces, key=lambda b: b[2] * b[3])
+                crop = cv2_img[y:y+h, x:x+w]
+                
+                st.write("Generating 100 face samples for better accuracy...")
+                progress_bar = st.progress(0)
+                
+                samples_generated = 0
+                
+                try:
+                    with engine.connect() as conn:
+                        for i in range(100):
+                            if i < 5:
+                                augmented_img = crop
+                            else:
+                                rows, cols, _ = crop.shape
+                                
+                                angle = np.random.uniform(-10, 10)
+                                M = cv2.getRotationMatrix2D((cols/2, rows/2), angle, 1)
+                                augmented_img = cv2.warpAffine(augmented_img, M, (cols, rows))
+                                
+                                brightness = np.random.uniform(0.8, 1.2)
+                                augmented_img = cv2.convertScaleAbs(augmented_img, alpha=brightness, beta=0)
+                                
+                                tx = np.random.uniform(-2, 2)
+                                ty = np.random.uniform(-2, 2)
+                                M_shift = np.float32([[1, 0, tx], [0, 1, ty]])
+                                augmented_img = cv2.warpAffine(augmented_img, M_shift, (cols, rows))
+
+                            resize = cv2.resize(augmented_img, (50,50)).flatten().reshape(1,-1)
+                            face_pickle = pickle.dumps(resize)
+                            
+                            query = text("INSERT INTO registered_faces (name, face_encoding) VALUES (:name, :encoding)")
+                            conn.execute(query, {"name": reg_name, "encoding": face_pickle})
+                            
+                            samples_generated += 1
+                            progress_bar.progress(samples_generated / 100)
+                        
+                        conn.commit()
+                        
+                    st.success(f"✅ Successfully registered **{reg_name}** with 100 samples!")
+                    st.info("The model is now trained on these 100 samples.")
+                    
+                except Exception as e:
+                    st.error(f"Error saving to DB: {e}")
+            else:
+                st.error("No face detected. Please try again.")
+    
 with tab1:
     st.header("Mark Attendance")
     
