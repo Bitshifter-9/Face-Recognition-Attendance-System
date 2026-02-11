@@ -49,3 +49,10 @@ def train_knn(faces, labels):
 
 st.set_page_config(page_title="Attendance System", layout="wide")
 st.title("Face Recognition Attendance System")
+
+tab1, tab2, tab3 = st.tabs(["📷 Mark Attendance", "📝 Register New Face", "📊 View Records"])
+
+with tab1:
+    st.header("Mark Attendance")
+    
+    FACES, LABELS = load_faces_from_db()
