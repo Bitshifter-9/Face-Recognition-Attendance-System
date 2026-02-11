@@ -38,5 +38,14 @@ def load_faces_from_db():
         st.error(f"Error loading faces from DB: {e}")
         return [], []
 
+def train_knn(faces, labels):
+    if len(faces) == 0: return None
+    n_neighbors = min(5, len(faces))
+    knn = KNeighborsClassifier(n_neighbors=n_neighbors)
+    if len(faces.shape) > 2:
+        faces = faces.reshape(faces.shape[0], -1) 
+    knn.fit(faces, labels)
+    return knn
+
 st.set_page_config(page_title="Attendance System", layout="wide")
 st.title("Face Recognition Attendance System")
