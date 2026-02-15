@@ -9,12 +9,6 @@ import numpy as np
 import pickle
 from sklearn.neighbors import KNeighborsClassifier
 
-try:
-    from deepface import DeepFace
-    DEEPFACE_AVAILABLE = True
-except ImportError:
-    DEEPFACE_AVAILABLE = False
-
 def get_db_engine():
     if 'DATABASE_URL' in os.environ:
         return create_engine(os.environ['DATABASE_URL'])
@@ -53,6 +47,14 @@ def train_knn(faces, labels):
     knn.fit(faces, labels)
     return knn
 
+@st.cache_resource
+def load_deepface():
+    try:
+        from deepface import DeepFace
+        return DeepFace
+    except ImportError:
+        return None
+
 ARCFACE_DB_DIR = "faces_db"
 
 def get_registered_arcface_names():
@@ -66,7 +68,6 @@ def get_registered_arcface_names():
 st.set_page_config(page_title="Attendance System", layout="wide")
 st.title("Face Recognition Attendance System")
 
-# model selector in sidebar
 st.sidebar.header("⚙️ Recognition Model")
 mode = st.sidebar.radio("Select model:", ["KNN (Classic ML)", "ArcFace (Deep Learning)"])
 
@@ -75,8 +76,6 @@ if "KNN" in mode:
     FACES, LABELS = load_faces_from_db()
 else:
     st.sidebar.success("**ArcFace** — deep learning embeddings, needs 1 photo per person, 99.8% accuracy.")
-    if not DEEPFACE_AVAILABLE:
-        st.sidebar.error("⚠️ deepface not installed! Run: `pip install deepface tf-keras`")
 
 tab1, tab2, tab3 = st.tabs(["📷 Mark Attendance", "📝 Register New Face", "📊 View Records"])
 
@@ -145,9 +144,7 @@ with tab2:
         reg_img_buffer = st.camera_input("Take a photo to register", key="register_cam_arc")
         
         if st.button("Save Face", key="arc_save"):
-            if not DEEPFACE_AVAILABLE:
-                st.error("DeepFace not installed. Run: `pip install deepface tf-keras`")
-            elif not reg_name:
+            if not reg_name:
                 st.error("Please enter a name.")
             elif reg_img_buffer is None:
                 st.error("Please take a photo.")
@@ -179,11 +176,9 @@ with tab3:
     
     if engine:
         try:
-            ts = time.time()
-            today = datetime.fromtimestamp(ts).strftime("%d-%m-%Y")
             query = f"SELECT * FROM attendance" 
             df = pd.read_sql(query, engine)
-            st.dataframe(df.style.highlight_max(axis=0), use_container_width=True)
+            st.dataframe(df, width=None)
         except Exception as e:
             st.error(f"Error loading records: {e}")
     
@@ -233,7 +228,8 @@ with tab1:
             st.warning("No registered faces found. Please go to the 'Register New Face' tab.")
     
     else:
-        if not DEEPFACE_AVAILABLE:
+        DeepFace = load_deepface()
+        if DeepFace is None:
             st.error("DeepFace not installed. Run: `pip install deepface tf-keras`")
         else:
             registered = get_registered_arcface_names()
