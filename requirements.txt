@@ -5,3 +5,5 @@ pandas
 streamlit>=1.42.0
 psycopg2-binary
 sqlalchemy
+deepface
+tf-keras
