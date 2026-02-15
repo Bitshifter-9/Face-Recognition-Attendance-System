@@ -178,7 +178,7 @@ with tab3:
         try:
             query = f"SELECT * FROM attendance" 
             df = pd.read_sql(query, engine)
-            st.dataframe(df, width=None)
+            st.dataframe(df, width='stretch')
         except Exception as e:
             st.error(f"Error loading records: {e}")
     
