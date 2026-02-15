@@ -1,0 +1,5 @@
+Demo.mov
+.venv/
+.DS_Store
+faces_db/
+__pycache__/
