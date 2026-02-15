@@ -243,59 +243,60 @@ with tab1:
                     bytes_data = img_file_buffer.getvalue()
                     cv2_img = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
                     
-                    with st.spinner("🔍 Running ArcFace recognition..."):
-                        try:
-                            results = DeepFace.find(
-                                img_path=cv2_img,
-                                db_path=ARCFACE_DB_DIR,
-                                model_name="ArcFace",
-                                detector_backend="opencv",
-                                distance_metric="cosine",
-                                enforce_detection=False,
-                                silent=True,
-                            )
-                            
-                            matched = False
-                            if len(results) > 0 and len(results[0]) > 0:
-                                match_df = results[0]
-                                match_df = match_df[match_df['distance'] < 0.40]
+                    faces_detect = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+                    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+                    det_faces = faces_detect.detectMultiScale(gray, 1.3, 5)
+                    
+                    if len(det_faces) == 0:
+                        st.warning("⚠️ No face detected in the photo. Please try again.")
+                    else:
+                        with st.spinner("🔍 Running ArcFace recognition..."):
+                            try:
+                                results = DeepFace.find(
+                                    img_path=cv2_img,
+                                    db_path=ARCFACE_DB_DIR,
+                                    model_name="ArcFace",
+                                    detector_backend="opencv",
+                                    distance_metric="cosine",
+                                    enforce_detection=False,
+                                    silent=True,
+                                )
                                 
-                                if len(match_df) > 0:
-                                    best = match_df.iloc[0]
-                                    name = os.path.splitext(os.path.basename(best['identity']))[0].replace("_", " ")
-                                    confidence = round((1 - best['distance']) * 100, 1)
+                                matched = False
+                                if len(results) > 0 and len(results[0]) > 0:
+                                    match_df = results[0]
+                                    match_df = match_df[match_df['distance'] < 0.40]
                                     
-                                    faces_detect = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-                                    gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-                                    det_faces = faces_detect.detectMultiScale(gray, 1.3, 5)
+                                    if len(match_df) > 0:
+                                        best = match_df.iloc[0]
+                                        name = os.path.splitext(os.path.basename(best['identity']))[0].replace("_", " ")
+                                        confidence = round((1 - best['distance']) * 100, 1)
+                                        
+                                        for (x,y,w,h) in det_faces:
+                                            cv2.rectangle(cv2_img, (x,y), (x+w,y+h), (0,200,0), 2)
+                                            cv2.putText(cv2_img, f"{name} ({confidence}%)", (x,y-15), 
+                                                        cv2.FONT_HERSHEY_COMPLEX, 0.8, (0,255,0), 2)
+                                        
+                                        ts = time.time()
+                                        date = datetime.fromtimestamp(ts).strftime("%d-%m-%Y")
+                                        timestamp = datetime.fromtimestamp(ts).strftime("%H-%M-%S")
+                                        
+                                        try:
+                                            attendance_data = pd.DataFrame([[name, timestamp, date]], columns=['Name', 'Time', 'Date'])
+                                            attendance_data.to_sql('attendance', engine, if_exists='append', index=False)
+                                            st.success(f"✅ Attendance marked for **{name}** — {confidence}% confidence (ArcFace)")
+                                        except Exception as e:
+                                            st.error(f"Error saving attendance: {e}")
+                                        matched = True
+                                
+                                if not matched:
                                     for (x,y,w,h) in det_faces:
-                                        cv2.rectangle(cv2_img, (x,y), (x+w,y+h), (0,200,0), 2)
-                                        cv2.putText(cv2_img, f"{name} ({confidence}%)", (x,y-15), 
-                                                    cv2.FONT_HERSHEY_COMPLEX, 0.8, (0,255,0), 2)
-                                    
-                                    ts = time.time()
-                                    date = datetime.fromtimestamp(ts).strftime("%d-%m-%Y")
-                                    timestamp = datetime.fromtimestamp(ts).strftime("%H-%M-%S")
-                                    
-                                    try:
-                                        attendance_data = pd.DataFrame([[name, timestamp, date]], columns=['Name', 'Time', 'Date'])
-                                        attendance_data.to_sql('attendance', engine, if_exists='append', index=False)
-                                        st.success(f"✅ Attendance marked for **{name}** — {confidence}% confidence (ArcFace)")
-                                    except Exception as e:
-                                        st.error(f"Error saving attendance: {e}")
-                                    matched = True
+                                        cv2.rectangle(cv2_img, (x,y), (x+w,y+h), (0,0,255), 2)
+                                        cv2.putText(cv2_img, "Unknown", (x,y-15), 
+                                                    cv2.FONT_HERSHEY_COMPLEX, 0.8, (0,0,255), 2)
+                                    st.warning("❌ Unknown person — no match found.")
+                                
+                                st.image(cv2_img, channels="BGR", caption="ArcFace Processed Image")
                             
-                            if not matched:
-                                faces_detect = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-                                gray = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-                                det_faces = faces_detect.detectMultiScale(gray, 1.3, 5)
-                                for (x,y,w,h) in det_faces:
-                                    cv2.rectangle(cv2_img, (x,y), (x+w,y+h), (0,0,255), 2)
-                                    cv2.putText(cv2_img, "Unknown", (x,y-15), 
-                                                cv2.FONT_HERSHEY_COMPLEX, 0.8, (0,0,255), 2)
-                                st.warning("❌ Unknown person — no match found.")
-                            
-                            st.image(cv2_img, channels="BGR", caption="ArcFace Processed Image")
-                        
-                        except Exception as e:
-                            st.error(f"ArcFace error: {e}")
+                            except Exception as e:
+                                st.error(f"ArcFace error: {e}")
