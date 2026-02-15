@@ -76,7 +76,7 @@ while True:
             confidence=0
             if len(results)>0 and len(results[0])>0:
                 match_df=results[0]
-                match_df=match_df[match_df['distance']<0.68]
+                match_df=match_df[match_df['distance']<0.40]
                 if len(match_df)>0:
                     best=match_df.iloc[0]
                     name=os.path.splitext(os.path.basename(best['identity']))[0].replace("_"," ")
