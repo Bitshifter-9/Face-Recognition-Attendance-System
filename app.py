@@ -57,6 +57,61 @@ def load_deepface():
 
 ARCFACE_DB_DIR = "faces_db"
 
+def restore_arcface_faces_from_db():
+    """Restore ArcFace face images from the database to the filesystem.
+    This ensures faces persist across Streamlit Cloud restarts."""
+    if not engine:
+        return
+    os.makedirs(ARCFACE_DB_DIR, exist_ok=True)
+    try:
+        # Ensure the arcface_faces table exists
+        with engine.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS arcface_faces (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    image_data BYTEA NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """))
+            conn.commit()
+        
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT name, image_data FROM arcface_faces")).fetchall()
+        
+        for row in result:
+            name = row[0]
+            image_data = row[1]
+            if isinstance(image_data, memoryview):
+                image_data = bytes(image_data)
+            img_path = os.path.join(ARCFACE_DB_DIR, f"{name}.jpg")
+            if not os.path.exists(img_path):
+                with open(img_path, 'wb') as f:
+                    f.write(image_data)
+    except Exception as e:
+        st.error(f"Error restoring ArcFace faces from DB: {e}")
+
+def save_arcface_face_to_db(safe_name, img_path):
+    """Save an ArcFace face image to the database for persistence."""
+    if not engine:
+        return
+    try:
+        with open(img_path, 'rb') as f:
+            image_data = f.read()
+        with engine.connect() as conn:
+            # Remove old entry for this name if exists
+            conn.execute(text("DELETE FROM arcface_faces WHERE name = :name"), {"name": safe_name})
+            conn.execute(
+                text("INSERT INTO arcface_faces (name, image_data) VALUES (:name, :image_data)"),
+                {"name": safe_name, "image_data": image_data}
+            )
+            conn.commit()
+    except Exception as e:
+        st.error(f"Error saving ArcFace face to DB: {e}")
+
+# Restore ArcFace faces from DB on startup
+restore_arcface_faces_from_db()
+
 def get_registered_arcface_names():
     os.makedirs(ARCFACE_DB_DIR, exist_ok=True)
     names = []
@@ -163,6 +218,7 @@ with tab2:
                     safe_name = reg_name.strip().replace(" ", "_")
                     img_path = os.path.join(ARCFACE_DB_DIR, f"{safe_name}.jpg")
                     cv2.imwrite(img_path, crop)
+                    save_arcface_face_to_db(safe_name, img_path)
                     st.success(f"✅ Registered **{reg_name}** with ArcFace! (1 photo saved)")
                 else:
                     st.error("No face detected. Please try again.")

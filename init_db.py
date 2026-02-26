@@ -28,6 +28,16 @@ with engine.connect() as conn:
             "Date" TEXT
         );
     """))
+
+    print("Creating 'arcface_faces' table...")
+    conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS arcface_faces (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            image_data BYTEA NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """))
     
     conn.commit()
     print("✅ Database tables created/verified.")
