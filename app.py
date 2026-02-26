@@ -139,10 +139,12 @@ with tab2:
     
     if "KNN" in mode:
         st.caption("📌 KNN mode — 100 augmented samples will be generated")
-        reg_name = st.text_input("Enter Name", placeholder="e.g., John Doe", key="knn_reg_name")
-        reg_img_buffer = st.camera_input("Take a photo to register", key="register_cam_knn")
+        with st.form("knn_register_form"):
+            reg_name = st.text_input("Enter Name", placeholder="e.g., John Doe")
+            reg_img_buffer = st.camera_input("Take a photo to register")
+            submitted = st.form_submit_button("Save Face")
         
-        if st.button("Save Face", key="knn_save"):
+        if submitted:
             if not reg_name:
                 st.error("Please enter a name.")
             elif reg_img_buffer is None:
@@ -195,10 +197,12 @@ with tab2:
                     st.error("No face detected. Please try again.")
     else:
         st.caption("📌 ArcFace mode — only 1 photo needed")
-        reg_name = st.text_input("Enter Name", placeholder="e.g., John Doe", key="arc_reg_name")
-        reg_img_buffer = st.camera_input("Take a photo to register", key="register_cam_arc")
+        with st.form("arcface_register_form"):
+            reg_name = st.text_input("Enter Name", placeholder="e.g., John Doe")
+            reg_img_buffer = st.camera_input("Take a photo to register")
+            submitted = st.form_submit_button("Save Face")
         
-        if st.button("Save Face", key="arc_save"):
+        if submitted:
             if not reg_name:
                 st.error("Please enter a name.")
             elif reg_img_buffer is None:
