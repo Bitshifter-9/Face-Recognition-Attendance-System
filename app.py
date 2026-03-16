@@ -10,10 +10,19 @@ import pickle
 from sklearn.neighbors import KNeighborsClassifier
 
 def get_db_engine():
-    if 'DATABASE_URL' in os.environ:
-        return create_engine(os.environ['DATABASE_URL'])
+    db_url = None
+    # Streamlit Cloud: read from st.secrets
+    try:
+        db_url = st.secrets["DATABASE_URL"]
+    except (KeyError, FileNotFoundError):
+        pass
+    # Local dev: fall back to environment variable
+    if not db_url:
+        db_url = os.environ.get('DATABASE_URL')
+    if db_url:
+        return create_engine(db_url)
     else:
-        st.error("DATABASE_URL not set.")
+        st.error("DATABASE_URL not set. Add it to Streamlit secrets or your environment.")
         return None
 
 engine = get_db_engine()
